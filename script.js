@@ -246,6 +246,67 @@ document.addEventListener('DOMContentLoaded', function() {
         cursorDot.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
     });
 
+    // Data extraction functions for CV generation
+    const extractPersonalInfo = () => {
+        const name = document.querySelector('.hero-name')?.textContent || 'Aryan Anil Tuntune';
+        const title = document.querySelector('.hero-title')?.textContent || 'Frontend Developer & UI/UX Designer';
+        const about = document.querySelector('.about-content p')?.textContent || '';
+        
+        return {
+            name,
+            title,
+            about,
+            contact: {
+                email: document.querySelector('.contact-email')?.textContent || 'contact@aryan.com',
+                phone: document.querySelector('.contact-phone')?.textContent || '+91 123 456 7890',
+                location: document.querySelector('.contact-location')?.textContent || 'Mumbai, India',
+                website: document.querySelector('.contact-website')?.textContent || 'www.aryan-portfolio.com',
+                linkedin: document.querySelector('.contact-linkedin')?.textContent || 'linkedin.com/in/aryan',
+                github: document.querySelector('.contact-github')?.textContent || 'github.com/aryant-28'
+            }
+        };
+    };
+
+    const extractSkills = () => {
+        const skillElements = document.querySelectorAll('.skill-item');
+        const skills = {
+            'Frontend Development': [],
+            'Design & Tools': []
+        };
+
+        skillElements.forEach(skill => {
+            const name = skill.querySelector('.skill-name')?.textContent || '';
+            const level = parseInt(skill.querySelector('.progress-line span')?.getAttribute('data-width') || '0');
+            const category = skill.closest('.skill-category')?.getAttribute('data-category') || 'Frontend Development';
+            
+            if (skills[category]) {
+                skills[category].push({ name, level });
+            }
+        });
+
+        return skills;
+    };
+
+    const extractProjects = () => {
+        const projectElements = document.querySelectorAll('.project-card');
+        return Array.from(projectElements).map(project => ({
+            title: project.querySelector('.project-title')?.textContent || '',
+            role: project.querySelector('.project-role')?.textContent || 'Frontend Developer',
+            duration: project.querySelector('.project-duration')?.textContent || '2023',
+            points: Array.from(project.querySelectorAll('.project-details li')).map(li => li.textContent || '')
+        })).slice(0, 3); // Limit to 3 projects for CV
+    };
+
+    const extractEducation = () => {
+        const educationSection = document.querySelector('.education-section');
+        return {
+            degree: educationSection?.querySelector('.education-degree')?.textContent || 'Bachelor of Technology in Computer Science',
+            institution: educationSection?.querySelector('.education-institution')?.textContent || 'Mumbai University',
+            duration: educationSection?.querySelector('.education-duration')?.textContent || '2020 - 2024',
+            achievements: educationSection?.querySelector('.education-achievements')?.textContent || 'First Class with Distinction | Web Development Club Lead'
+        };
+    };
+
     // CV Generation and Download Functionality
     const generateCV = async () => {
         const { jsPDF } = window.jspdf;
@@ -256,6 +317,12 @@ document.addEventListener('DOMContentLoaded', function() {
             compress: true,
             putOnlyUsedFonts: true
         });
+
+        // Extract data from website
+        const personalInfo = extractPersonalInfo();
+        const skills = extractSkills();
+        const projects = extractProjects();
+        const education = extractEducation();
 
         // Define colors and styles
         const colors = {
@@ -270,11 +337,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Helper function for section headers
         const addSectionHeader = (text, y) => {
-            // Simple section header design
             doc.setFillColor(...colors.primary);
             doc.rect(15, y - 5, 3, 10, 'F');
             
-            // Text
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.setTextColor(...colors.secondary);
@@ -285,10 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Document setup
         doc.setProperties({
-            title: 'Aryan Anil Tuntune - Professional CV',
-            author: 'Aryan Anil Tuntune',
+            title: `${personalInfo.name} - Professional CV`,
+            author: personalInfo.name,
             subject: 'Professional CV/Resume',
-            keywords: 'frontend developer, UI/UX designer, web development',
+            keywords: personalInfo.title,
             creator: 'Portfolio Website'
         });
 
@@ -296,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
         doc.setFillColor(...colors.secondary);
         doc.rect(0, 0, 210, 60, 'F');
 
-        // Load and add profile picture with proper aspect ratio
+        // Load and add profile picture
         try {
             const img = new Image();
             img.src = 'assets/images/aryan1.JPEG';
@@ -305,28 +370,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.onerror = reject;
             });
 
-            // Calculate aspect ratio and ensure circular fit
-            const targetDiameter = 25; // Much smaller for better fit
+            const targetDiameter = 25;
             const x = 160;
             const y = 18;
 
-            // Draw circular clipping mask
             doc.setFillColor(...colors.secondary);
             doc.circle(x + targetDiameter/2, y + targetDiameter/2, targetDiameter/2, 'F');
             
-            // Add image with proper clipping
-            doc.addImage(
-                img, 
-                'JPEG', 
-                x, 
-                y,
-                targetDiameter,
-                targetDiameter,
-                undefined,
-                'MEDIUM'
-            );
+            doc.addImage(img, 'JPEG', x, y, targetDiameter, targetDiameter, undefined, 'MEDIUM');
 
-            // Circular border
             doc.setDrawColor(...colors.primary);
             doc.setLineWidth(0.5);
             doc.circle(x + targetDiameter/2, y + targetDiameter/2, targetDiameter/2, 'S');
@@ -334,31 +386,32 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading profile image:', error);
         }
 
-        // Name and Title with adjusted spacing
+        // Name and Title
+        const nameParts = personalInfo.name.split(' ');
         doc.setTextColor(...colors.accent);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18); // Smaller for better balance
-        doc.text('ARYAN ANIL', 20, 25);
-        doc.text('TUNTUNE', 20, 35);
+        doc.setFontSize(18);
+        doc.text(nameParts[0], 20, 25);
+        doc.text(nameParts.slice(1).join(' '), 20, 35);
         
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11); // Smaller
-        doc.text('Frontend Developer & UI/UX Designer', 20, 45);
+        doc.setFontSize(11);
+        doc.text(personalInfo.title, 20, 45);
 
-        // Contact Information with condensed spacing
+        // Contact Information
         const contactInfo = [
-            { icon: '📧', text: 'contact@aryan.com' },
-            { icon: '📱', text: '+91 123 456 7890' },
-            { icon: '📍', text: 'Mumbai, India' },
-            { icon: '🌐', text: 'www.aryan-portfolio.com' },
-            { icon: '💼', text: 'linkedin.com/in/aryan' },
-            { icon: '⚡', text: 'github.com/aryant-28' }
+            { icon: '📧', text: personalInfo.contact.email },
+            { icon: '📱', text: personalInfo.contact.phone },
+            { icon: '📍', text: personalInfo.contact.location },
+            { icon: '🌐', text: personalInfo.contact.website },
+            { icon: '💼', text: personalInfo.contact.linkedin },
+            { icon: '⚡', text: personalInfo.contact.github }
         ];
 
-        doc.setFontSize(8); // Smaller font size
+        doc.setFontSize(8);
         contactInfo.forEach((item, index) => {
             const x = index < 3 ? 20 : 100;
-            const y = 60 + ((index % 3) * 5); // Reduced spacing
+            const y = 60 + ((index % 3) * 5);
             doc.setTextColor(...colors.accent);
             doc.setFont('helvetica', 'bold');
             doc.text(item.icon, x, y);
@@ -366,37 +419,19 @@ document.addEventListener('DOMContentLoaded', function() {
             doc.text(item.text, x + 7, y);
         });
 
-        // Professional Summary with condensed spacing
+        // Professional Summary
         let yPos = addSectionHeader('Professional Summary', 80);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9); // Smaller font
+        doc.setFontSize(9);
         doc.setTextColor(...colors.text);
-        const summary = 'Frontend Developer and UI/UX Designer with expertise in creating responsive web applications. Skilled in modern JavaScript frameworks, UI/UX design principles, and performance optimization. Proven track record of delivering user-friendly solutions with high performance and accessibility standards.';
-        const summaryLines = doc.splitTextToSize(summary, 175);
+        const summaryLines = doc.splitTextToSize(personalInfo.about || 'Frontend Developer and UI/UX Designer with expertise in creating responsive web applications...', 175);
         doc.text(summaryLines, 20, yPos);
 
-        // Calculate height of summary text
         const summaryHeight = (summaryLines.length * 9) * 0.3527777778;
 
-        // Technical Skills with condensed spacing
+        // Technical Skills
         yPos = addSectionHeader('Technical Expertise', yPos + summaryHeight + 5);
         
-        const skills = {
-            'Frontend Development': [
-                { name: 'HTML5/CSS3', level: 95 },
-                { name: 'JavaScript/ES6+', level: 85 },
-                { name: 'React.js', level: 88 },
-                { name: 'Responsive Design', level: 92 }
-            ],
-            'Design & Tools': [
-                { name: 'Figma/Adobe XD', level: 88 },
-                { name: 'UI/UX Design', level: 90 },
-                { name: 'Wireframing', level: 92 },
-                { name: 'Design Systems', level: 85 }
-            ]
-        };
-
-        // Draw skills with condensed spacing
         Object.entries(skills).forEach(([category, skillSet], categoryIndex) => {
             const startX = 20 + (categoryIndex * 90);
             doc.setFont('helvetica', 'bold');
@@ -404,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
             doc.text(category, startX, yPos + 5);
             
             skillSet.forEach((skill, index) => {
-                const y = yPos + 12 + (index * 7); // Reduced spacing
+                const y = yPos + 12 + (index * 7);
                 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8);
@@ -423,35 +458,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Calculate skills section height
-        const skillsHeight = Object.values(skills)[0].length * 7 + 15;
+        const skillsHeight = Math.max(...Object.values(skills).map(s => s.length)) * 7 + 15;
 
-        // Featured Projects with condensed spacing
+        // Featured Projects
         yPos = addSectionHeader('Featured Projects', yPos + skillsHeight + 5);
         
-        const projects = [
-            {
-                title: 'Car Scroller Animation Website',
-                role: 'Lead Frontend Developer',
-                duration: '2023',
-                points: [
-                    'Interactive scroll animations with 95% performance score',
-                    'Optimized frame-by-frame techniques for smooth UX'
-                ]
-            },
-            {
-                title: 'E-Commerce Platform',
-                role: 'Frontend Developer & UI Designer',
-                duration: '2023',
-                points: [
-                    'Built responsive e-commerce with modern UI/UX',
-                    'Implemented cart and payment system integration'
-                ]
-            }
-        ];
-
         projects.forEach((project, index) => {
-            const projectY = yPos + 8 + (index * 18); // Reduced spacing
+            const projectY = yPos + 8 + (index * 18);
             
             doc.setFillColor(...colors.primary);
             doc.circle(17, projectY - 1, 0.8, 'F');
@@ -475,25 +488,24 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Education section with condensed spacing
+        // Education section
         yPos = addSectionHeader('Education', yPos + 45);
         
-        // Education details
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        doc.text('Bachelor of Technology in Computer Science', 20, yPos + 5);
+        doc.text(education.degree, 20, yPos + 5);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.text('Mumbai University | 2020 - 2024', 20, yPos + 11);
+        doc.text(`${education.institution} | ${education.duration}`, 20, yPos + 11);
         doc.setFontSize(8);
-        doc.text('First Class with Distinction | Web Development Club Lead', 20, yPos + 16);
+        doc.text(education.achievements, 20, yPos + 16);
 
         // Footer
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
         doc.setTextColor(...colors.subtext);
         doc.text(
-            'Aryan Anil Tuntune | Professional CV',
+            `${personalInfo.name} | Professional CV`,
             doc.internal.pageSize.width / 2,
             doc.internal.pageSize.height - 10,
             { align: 'center' }
@@ -517,7 +529,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const doc = await generateCV();
                 
                 // Save the PDF
-                doc.save('Aryan_Tuntune_CV.pdf');
+                const fileName = 'Aryan_Tuntune_CV.pdf';
+                doc.save(fileName);
                 
                 // Success feedback
                 this.textContent = 'CV Downloaded!';
@@ -536,4 +549,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-}); 
+});
